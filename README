@@ -1,0 +1,6 @@
+Lightome is a lightweight serial to OSC bridge for communication with the Monome.  It is written in C and does not require Zeroconf or the Max runtime.  This project is a work in progress and will not currently function correctly (for users other than me) without changes to the source.
+
+Todo:
+- Allow operation with - and detection of - any Monome
+- Complete implementation of the Monome serial protocol
+- Allow setting of the source and listening TCP ports
