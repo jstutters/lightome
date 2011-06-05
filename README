@@ -1,5 +1,14 @@
 Lightome is a lightweight serial to OSC bridge for communication with the Monome.  It is written in C and does not require Zeroconf or the Max runtime.  This project is a work in progress and will not currently function correctly (for users other than me) without changes to the source.
 
+To compile on OS X:
+1) Install liblo (http://liblo.sourceforge.net/)
+2) Run: gcc -Wall main.c -o lightome -llo -framework CoreFoundation
+
+To compile on Linux (untested):
+1) Install liblo (http://liblo.sourceforge.net/)
+2) Run: gcc -Wall main.c -o lightome -llo
+
+
 Todo:
 - Allow operation with - and detection of - any Monome
 - Complete implementation of the Monome serial protocol
