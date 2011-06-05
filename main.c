@@ -130,13 +130,17 @@ int main(int argc, char** argv) {
   lo_server_thread oscServer;
   
   fd = initializeSerialPort();
+  if (fd < 0) {
+    printf("Unable to initialize serial port\n");
+    return EXIT_FAILURE;
+  }
   printf("Serial port initialized\n");
   
   oscServer = lo_server_thread_new("12000", oscServerError);
   printf("Server thread created\n");
-  lo_server_thread_add_method(oscServer, "/monomebridge/led_on", "ii", ledOnHandler, &fd);
-  lo_server_thread_add_method(oscServer, "/monomebridge/led_off", "ii", ledOffHandler, &fd);
-  lo_server_thread_add_method(oscServer, "/monomebridge/clear", "i", clearHandler, &fd);
+  lo_server_thread_add_method(oscServer, "/lightome/led_on", "ii", ledOnHandler, &fd);
+  lo_server_thread_add_method(oscServer, "/lightome/led_off", "ii", ledOffHandler, &fd);
+  lo_server_thread_add_method(oscServer, "/lightome/clear", "i", clearHandler, &fd);
   lo_server_thread_add_method(oscServer, NULL, NULL, genericHandler, NULL);
   lo_server_thread_start(oscServer);
   printf("OSC server started\n");
@@ -152,10 +156,10 @@ int main(int argc, char** argv) {
       oscArgs[1] = y;
       if (status == 0) {
         printf("Press  : %u, %u\n", x, y);
-        sendOscMessage("/monomebridge/press", oscArgs, 2);
+        sendOscMessage("/lightome/press", oscArgs, 2);
       } else if (status == 1) {
         printf("Release: %u, %u\n", x, y);
-        sendOscMessage("/monomebridge/release", oscArgs, 2);
+        sendOscMessage("/lightome/release", oscArgs, 2);
       }
       lineCount++;
     }
