@@ -1,3 +1,23 @@
+/* -------------------------------------------------------------------------------
+ * Lightome - serial to OSC bridge for the Monome
+ * Copyright (C) 2011
+ *
+ * Jonny Stutters <jstutters@jeremah.co.uk>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * ------------------------------------------------------------------------------ */
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -6,8 +26,28 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <errno.h>
+#include <dirent.h>
 #include "lo/lo.h"
- 
+
+char* pathToMonome() {
+  DIR *dfd;
+  struct dirent *dp;
+  dfd = opendir("/dev");
+  char* monomePath = NULL;
+  if (dfd != NULL) {
+    while ((dp = readdir(dfd)) != NULL) {
+      //if (strstr(dp->d_name, "usbserial-m256")) {
+      if (strstr(dp->d_name, "Bluetooth-PDA-Sync")) {
+        monomePath = dp->d_name;
+      }
+    }
+    closedir(dfd);
+  } else {
+    perror("Couldn't get directory listing for /dev\n");
+  }
+  return monomePath;
+}
+
 int initializeSerialPort() { 
   int fd;
   struct termios config;
@@ -128,7 +168,9 @@ int main(int argc, char** argv) {
   int lineCount = 0;
   int oscArgs[2];
   lo_server_thread oscServer;
-  
+
+  printf("%s\n", pathToMonome());
+
   fd = initializeSerialPort();
   if (fd < 0) {
     printf("Unable to initialize serial port\n");
