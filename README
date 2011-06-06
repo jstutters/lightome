@@ -8,8 +8,6 @@ To compile on Linux (untested):
 1) Install liblo (http://liblo.sourceforge.net/)
 2) Run: gcc -Wall main.c -o lightome -llo
 
-
 Todo:
 - Allow operation with - and detection of - any Monome
 - Complete implementation of the Monome serial protocol
-- Allow setting of the source and listening TCP ports
