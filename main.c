@@ -29,16 +29,24 @@
 #include <dirent.h>
 #include "lo/lo.h"
 
+#define FALSE 0
+#define TRUE 1
+
 char* pathToMonome() {
   DIR *dfd;
   struct dirent *dp;
   dfd = opendir("/dev");
   char* monomePath = NULL;
+  char* monomeFile = NULL;
   if (dfd != NULL) {
     while ((dp = readdir(dfd)) != NULL) {
-      //if (strstr(dp->d_name, "usbserial-m256")) {
-      if (strstr(dp->d_name, "Bluetooth-PDA-Sync")) {
-        monomePath = dp->d_name;
+      if (strstr(dp->d_name, "tty.usbserial-m256")) {
+        monomeFile = dp->d_name;
+        printf("%s\n", monomeFile);
+        monomePath = malloc(6 + strlen(monomeFile));
+        printf("Memory allocated\n");
+        strcpy(monomePath, "/dev/");
+        strcpy(monomePath + 5, monomeFile);
       }
     }
     closedir(dfd);
@@ -48,11 +56,12 @@ char* pathToMonome() {
   return monomePath;
 }
 
-int initializeSerialPort() { 
+int initializeSerialPort(char* monomePath) { 
   int fd;
   struct termios config;
 
-  fd = open("/dev/tty.usbserial-m256-275", O_RDWR | O_NOCTTY | O_NDELAY);
+  printf("Initializing serial port at %s\n", monomePath);
+  fd = open(monomePath, O_RDWR | O_NOCTTY);
   if (fd == -1) {
     perror("Failed to open serial port");
     return -1;
@@ -82,8 +91,8 @@ int initializeSerialPort() {
   config.c_oflag &= ~OPOST; // make raw
 
   // see: http://unixwiz.net/techtips/termios-vmin-vtime.html
-  config.c_cc[VMIN]  = 0;
-  config.c_cc[VTIME] = 20;
+  config.c_cc[VMIN]  = 2;
+  config.c_cc[VTIME] = 0;
   
   if( tcsetattr(fd, TCSANOW, &config) < 0) {
       perror("init_serialport: Couldn't set term attributes");
@@ -159,24 +168,56 @@ void oscServerError(int num, const char *msg, const char *path) {
 }
 
 int main(int argc, char** argv) {
+  char* monomePath;
   int fd;
-  uint8_t cin;
+  uint8_t cin[2];
   uint8_t status;
   uint8_t address;
   uint8_t x;
   uint8_t y;
   int lineCount = 0;
   int oscArgs[2];
+  char* inputOscPort = NULL;
+  char* outputOscPort = NULL;
+  int c;
+  uint8_t inputPortSet = FALSE;
+  uint8_t outputPortSet = FALSE;
   lo_server_thread oscServer;
 
-  printf("%s\n", pathToMonome());
+  while ((c = getopt(argc, argv, "i:o:")) != -1) {
+    switch (c) {
+      case 'i':
+        inputOscPort = optarg;
+        inputPortSet = TRUE;
+        break;
+      case 'o':
+        outputOscPort = optarg;
+        outputPortSet = TRUE;
+        break;
+      default:
+        abort();
+    }
+  }
+  if (inputPortSet == FALSE) {
+    inputOscPort = "9000";
+  }
+  if (outputPortSet == FALSE) {
+    outputOscPort = "57120";
+  }
 
-  fd = initializeSerialPort();
+  printf("Input port: %s, output port: %s\n", inputOscPort, outputOscPort);
+  
+  printf("Looking for Monome\n");
+  monomePath = pathToMonome();
+
+  fd = initializeSerialPort(monomePath);
   if (fd < 0) {
     printf("Unable to initialize serial port\n");
     return EXIT_FAILURE;
   }
   printf("Serial port initialized\n");
+  free(monomePath);
+  monomePath = NULL;
   
   oscServer = lo_server_thread_new("12000", oscServerError);
   printf("Server thread created\n");
@@ -188,10 +229,9 @@ int main(int argc, char** argv) {
   printf("OSC server started\n");
 
   while (1) {
-    if (read(fd, &cin, 1) > 0) {
-      status = cin >> 4;
-      read(fd, &cin, 1);
-      address = cin;
+    if (read(fd, &cin, 2) > 0) {
+      status = cin[0] >> 4;
+      address = cin[1];
       y = address >> 4;
       x = address & 0x0f;
       oscArgs[0] = x;
@@ -205,7 +245,6 @@ int main(int argc, char** argv) {
       }
       lineCount++;
     }
-    usleep(500);
   }
   close(fd);
   return 0;
