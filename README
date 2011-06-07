@@ -1,4 +1,12 @@
+#
+# About
+#
+
 Lightome is a lightweight serial to OSC bridge for communication with the Monome.  It is written in C and does not require Zeroconf or the Max runtime.  This project is a work in progress and will not currently function correctly (for users other than me) without changes to the source.
+
+#
+# Building
+#
 
 To compile on OS X:
 1) Install liblo (http://liblo.sourceforge.net/)
@@ -8,6 +16,29 @@ To compile on Linux (untested):
 1) Install liblo (http://liblo.sourceforge.net/)
 2) Run: gcc -Wall main.c -o lightome -llo
 
-Todo:
-- Allow operation with - and detection of - any Monome
+#
+# Usage
+#
+
+Lightome supports the following commandline options:
+-i [port] TCP port to listen on
+-o [port] TCP port to send on
+-p [/path/to/monome_tty] path to the Monome TTY
+-h print a summary of the commandline options
+
+When buttons are pushed on the Monome Lightome will send an OSC message to /lightome/press with arguments for the x any y position of the button pressed
+
+When a button is released Lightome will send an OSC message to /lightome/release with the x and y positions of the button
+
+To light up an LED on the Monome send a message to /lightome/led_on with the x and y positions of the LED to be lit
+
+To switch off an LED, send a message to /lightome/led_off with the x and y positions
+
+To clear or turn on the LEDs, send a message to /lightome/clear with either a 1 integer to turn on the LEDs or a 0 to turn them off.
+
+#
+# Todo
+#
+
 - Complete implementation of the Monome serial protocol
+- Allow the user to specify the OSC prefix

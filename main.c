@@ -38,9 +38,16 @@ char* pathToMonome() {
   dfd = opendir("/dev");
   char* monomePath = NULL;
   char* monomeFile = NULL;
+  char* m256 = NULL;
+  char* m128 = NULL;
+  char* m64 = NULL;
   if (dfd != NULL) {
     while ((dp = readdir(dfd)) != NULL) {
-      if (strstr(dp->d_name, "tty.usbserial-m256")) {
+      m256 = strstr(dp->d_name, "tty.usbserial-m256");
+      m128 = strstr(dp->d_name, "tty.usbserial-m128");
+      m64 = strstr(dp->d_name, "tty.usbserial-m64");
+
+      if (m256 || m128 || m64) {
         monomeFile = dp->d_name;
         printf("%s\n", monomeFile);
         monomePath = malloc(6 + strlen(monomeFile));
@@ -167,8 +174,12 @@ void oscServerError(int num, const char *msg, const char *path) {
   fflush(stdout);
 }
 
+void printHelp() {
+  printf("usage: lightome [-o tcp_send_port] [-i tcp_listen_port] [-p path_to_monome_tty]\n");
+}
+
 int main(int argc, char** argv) {
-  char* monomePath;
+  char* monomePath = NULL;
   int fd;
   uint8_t cin[2];
   uint8_t status;
@@ -182,9 +193,10 @@ int main(int argc, char** argv) {
   int c;
   uint8_t inputPortSet = FALSE;
   uint8_t outputPortSet = FALSE;
+  uint8_t monomePathSet = FALSE;
   lo_server_thread oscServer;
 
-  while ((c = getopt(argc, argv, "i:o:")) != -1) {
+  while ((c = getopt(argc, argv, "hi:o:p:")) != -1) {
     switch (c) {
       case 'i':
         inputOscPort = optarg;
@@ -194,6 +206,13 @@ int main(int argc, char** argv) {
         outputOscPort = optarg;
         outputPortSet = TRUE;
         break;
+      case 'p':
+        monomePath = optarg;
+        monomePathSet = TRUE;
+        break;
+      case 'h':
+        printHelp();
+        return EXIT_SUCCESS;
       default:
         abort();
     }
@@ -206,9 +225,11 @@ int main(int argc, char** argv) {
   }
 
   printf("Input port: %s, output port: %s\n", inputOscPort, outputOscPort);
-  
-  printf("Looking for Monome\n");
-  monomePath = pathToMonome();
+ 
+  if (monomePathSet == FALSE) {
+    printf("Looking for Monome\n");
+    monomePath = pathToMonome();
+  }
 
   fd = initializeSerialPort(monomePath);
   if (fd < 0) {
@@ -216,8 +237,10 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
   printf("Serial port initialized\n");
-  free(monomePath);
-  monomePath = NULL;
+  if (monomePathSet == FALSE) {
+    free(monomePath);
+    monomePath = NULL;
+  }
   
   oscServer = lo_server_thread_new("12000", oscServerError);
   printf("Server thread created\n");
@@ -227,6 +250,7 @@ int main(int argc, char** argv) {
   lo_server_thread_add_method(oscServer, NULL, NULL, genericHandler, NULL);
   lo_server_thread_start(oscServer);
   printf("OSC server started\n");
+  printf("Press ctrl-c to exit\n");
 
   while (1) {
     if (read(fd, &cin, 2) > 0) {
